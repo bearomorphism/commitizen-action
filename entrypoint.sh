@@ -95,6 +95,12 @@ if [[ $INPUT_MANUAL_VERSION ]]; then
   CZ_CMD+=("$INPUT_MANUAL_VERSION")
 fi
 if [[ $INPUT_CHANGELOG_INCREMENT_FILENAME ]]; then
+  # Avoid polluting the changelog increment file with git's commit output
+  # (e.g. "[main abcdef] bump: ..." and the file-change summary).
+  # Force git output to stderr unless the user already enabled it.
+  if [[ $INPUT_GIT_REDIRECT_STDERR != 'true' ]]; then
+    CZ_CMD+=('--git-output-to-stderr')
+  fi
   CZ_CMD+=('--changelog-to-stdout')
   echo "${CZ_CMD[@]}" ">$INPUT_CHANGELOG_INCREMENT_FILENAME"
   "${CZ_CMD[@]}" >"$INPUT_CHANGELOG_INCREMENT_FILENAME"
