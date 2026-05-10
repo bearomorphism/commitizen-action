@@ -94,6 +94,24 @@ fi
 if [[ $INPUT_MANUAL_VERSION ]]; then
   CZ_CMD+=("$INPUT_MANUAL_VERSION")
 fi
+
+# Capture the would-be next version BEFORE running the actual bump.
+# This is used as a fallback for the version output when `cz version --project`
+# does not reflect the bump (e.g. version_provider=scm combined with
+# commit:false, where neither version files nor git tags are updated).
+# Strip `--changelog` and `--changelog-to-stdout` for the `--get-next` call:
+# in commitizen < 4.10.1 these flags are incompatible with `--get-next`
+# (NotAllowed); in newer versions they emit a no-op warning. Either way
+# `--get-next` does not generate a changelog so the flag is unnecessary.
+GET_NEXT_CMD=()
+for arg in "${CZ_CMD[@]}"; do
+  if [[ $arg != '--changelog' && $arg != '--changelog-to-stdout' ]]; then
+    GET_NEXT_CMD+=("$arg")
+  fi
+done
+# Failures (no bumpable commits, etc.) are tolerated and produce an empty value.
+NEXT_REV_PRE="$("${GET_NEXT_CMD[@]}" --get-next 2>/dev/null || true)"
+
 if [[ $INPUT_CHANGELOG_INCREMENT_FILENAME ]]; then
   CZ_CMD+=('--changelog-to-stdout')
   echo "${CZ_CMD[@]}" ">$INPUT_CHANGELOG_INCREMENT_FILENAME"
@@ -109,6 +127,20 @@ else
 fi
 
 REV="$(cz version --project)"
+NEXT_REV_MAJOR="$(cz version --project --major)"
+NEXT_REV_MINOR="$(cz version --project --minor)"
+
+# Fall back to the pre-computed --get-next value when `cz version --project`
+# did not reflect the bump. This happens with version_provider=scm and
+# commit:false, where the bump does not update any tracked files and no
+# tag is created, so the project's reported version remains unchanged.
+if [[ $REV == "$PREV_REV" && -n "$NEXT_REV_PRE" && "$NEXT_REV_PRE" != "$PREV_REV" ]]; then
+  REV="$NEXT_REV_PRE"
+  NEXT_REV_MAJOR="${REV%%.*}"
+  NEXT_REV_REST="${REV#*.}"
+  NEXT_REV_MINOR="${NEXT_REV_REST%%.*}"
+fi
+
 if [[ $REV == "$PREV_REV" ]]; then
   INPUT_PUSH='false'
 fi
@@ -116,10 +148,8 @@ echo "REVISION=${REV}" >>"$GITHUB_ENV"
 echo "version=${REV}" >>"$GITHUB_OUTPUT"
 echo "next_version=${REV}" >>"$GITHUB_OUTPUT"
 
-NEXT_REV_MAJOR="$(cz version --project --major)"
 echo "NEXT_REVISION_MAJOR=${NEXT_REV_MAJOR}" >>"$GITHUB_ENV"
 echo "next_version_major=${NEXT_REV_MAJOR}" >>"$GITHUB_OUTPUT"
-NEXT_REV_MINOR="$(cz version --project --minor)"
 echo "NEXT_REVISION_MINOR=${NEXT_REV_MINOR}" >>"$GITHUB_ENV"
 echo "next_version_minor=${NEXT_REV_MINOR}" >>"$GITHUB_OUTPUT"
 
