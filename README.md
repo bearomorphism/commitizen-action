@@ -203,5 +203,5 @@ create a new commitizen python package, or you can describe it on the `toml` con
 [cz]: https://commitizen-tools.github.io/commitizen/
 [cc]: https://www.conventionalcommits.org/
 [semver]: https://semver.org/
-[cz-conf]: https://commitizen-tools.github.io/commitizen/config/
-[cz-custom]: https://commitizen-tools.github.io/commitizen/customization/
+[cz-conf]: https://commitizen-tools.github.io/commitizen/config/configuration_file/
+[cz-custom]: https://commitizen-tools.github.io/commitizen/customization/config_file/
